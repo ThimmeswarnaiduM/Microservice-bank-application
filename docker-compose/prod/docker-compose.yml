@@ -1,0 +1,210 @@
+
+
+networks:
+  eazybank:
+
+volumes:
+  cards_data:
+  accounts_data:
+  loans_data:
+
+services:
+  # RabbitMQ for Message Brokering
+  rabbit:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbit
+    hostname: rabbitMq
+    ports:
+      - "5672:5672"    # Message broker port
+      - "15672:15672"  # Management UI port
+    healthcheck:
+      test: [ "CMD", "curl", "--silent", "--fail", "http://localhost:15672/api/healthchecks/node" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - eazybank
+    restart: unless-stopped
+
+
+  # Config Server for Externalized Configurations
+  configserver:
+    image: thimmeswarnaidu/configserver
+    container_name: configserver
+    ports:
+      - "8071:8071"
+    healthcheck:
+      test: "curl --fail --silent http://localhost:8071/actuator/health/readiness || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    depends_on:
+      rabbit:
+        condition: service_healthy
+    networks:
+      - eazybank
+    deploy:
+      resources:
+        limits:
+          memory: "128m"
+        reservations:
+          memory: "64m"
+    restart: unless-stopped
+
+  # MySQL Database for Cards Service
+  cards_db:
+    image: mysql:8
+    container_name: cards_db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: cardsdb
+    ports:
+      - "3309:3306"
+    volumes:
+      - cards_data:/var/lib/mysql
+    networks:
+      - eazybank
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # Cards Backend Service
+  cards_backend:
+    image: thimmeswarnaidu/cards-backend
+    container_name: cards_backend
+    depends_on:
+      cards_db:
+        condition: service_healthy
+      configserver:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://cards_db:3306/cardsdb
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_JPA_SHOW_SQL: "true"
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.MySQLDialect
+      SPRING_SQL_INIT_MODE: embedded
+      SPRING_CONFIG_IMPORT: "configserver:http://configserver:8071"
+      SPRING_RABBITMQ_HOST: "rabbit"
+      SPRING_APPLICATION_NAME: "cards"
+      SPRING_PROFILES_ACTIVE: "prod"
+    ports:
+      - "8081:8081"
+    networks:
+      - eazybank
+    deploy:
+      resources:
+        limits:
+          memory: "256m"
+        reservations:
+          memory: "128m"
+    restart: unless-stopped
+
+  # MySQL Database for Accounts Service
+  accounts_db:
+    image: mysql:8
+    container_name: accounts_db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: accountsdb
+    ports:
+      - "3308:3306"
+    volumes:
+      - accounts_data:/var/lib/mysql
+    networks:
+      - eazybank
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # Accounts Backend Service
+  accounts_backend:
+    image: thimmeswarnaidu/accounts_backend
+    container_name: accounts_backend
+    depends_on:
+      accounts_db:
+        condition: service_healthy
+      configserver:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://accounts_db:3306/accountsdb
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_JPA_SHOW_SQL: "true"
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.MySQLDialect
+      SPRING_SQL_INIT_MODE: embedded
+      SPRING_CONFIG_IMPORT: "configserver:http://configserver:8071"
+      SPRING_RABBITMQ_HOST: "rabbit"
+      SPRING_APPLICATION_NAME: "accounts"
+      SPRING_PROFILES_ACTIVE: "prod"
+    ports:
+      - "8080:8080"
+    networks:
+      - eazybank
+    deploy:
+      resources:
+        limits:
+          memory: "256m"
+        reservations:
+          memory: "128m"
+    restart: unless-stopped
+
+  # MySQL Database for Loans Service
+  loans_db:
+    image: mysql:8
+    container_name: loans_db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: loansdb
+    ports:
+      - "3307:3306"
+    volumes:
+      - loans_data:/var/lib/mysql
+    networks:
+      - eazybank
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # Loans Backend Service
+  loans_backend:
+    image: thimmeswarnaidu/loans
+    container_name: loans_backend
+    depends_on:
+      loans_db:
+        condition: service_healthy
+      configserver:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://loans_db:3306/loansdb
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_JPA_SHOW_SQL: "true"
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.MySQLDialect
+      SPRING_SQL_INIT_MODE: embedded
+      SPRING_CONFIG_IMPORT: "configserver:http://configserver:8071"
+      SPRING_RABBITMQ_HOST: "rabbit"
+      SPRING_APPLICATION_NAME: "loans"
+      SPRING_PROFILES_ACTIVE: "prod"
+    ports:
+      - "8082:8082"
+    networks:
+      - eazybank
+    deploy:
+      resources:
+        limits:
+          memory: "256m"
+        reservations:
+          memory: "128m"
+    restart: unless-stopped

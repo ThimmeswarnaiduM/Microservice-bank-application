@@ -1,0 +1,59 @@
+spring:
+  config:
+    import: "optional:configserver:http://localhost:8071/"
+  application:
+    name: cards
+  profiles:
+    active: "default"  # Ensure this profile exists or use "default"
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/microservice_final
+    username: root
+    password: mysql
+    driver-class-name: com.mysql.cj.jdbc.Driver  # Explicit driver class for MySQL
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update  # Adjust to "none" or "validate" for production
+    properties:
+      hibernate.dialect: org.hibernate.dialect.MySQL8Dialect  # Update for MySQL 8+
+
+build:
+  accounts:
+    message: "Hello, Welcome to EazyBytes Accounts related Default APIs!"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+    info:
+      env:
+        enabled: true
+  endpoint:
+    shutdown:
+      enabled: true
+
+info:
+  app:
+    name: "cards Service"
+    version: "1.0.0"
+    description: "EazyBytes Accounts Service"
+    contact:
+      email: "L1H5o@example.com"
+
+eureka:
+  instance:
+    preferIpAddress: true
+  client:
+    fetchRegistry: true  # The service will fetch the registry from Eureka
+    registerWithEureka: true  # The service will register itself with Eureka
+    serviceUrl:
+      defaultZone: http://localhost:8070/eureka  # Eureka server URL
+server:
+  port: 8081
+logging:
+  level:
+    com:
+      eazybytes:
+        cards: DEBUG  # Ensure the indentation is correct here

@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: configserver
+  profiles:
+    active: git  # The active profile is set to "git" for fetching from Git repository
+  cloud:
+    config:
+      server:
+        git:
+          uri: https://github.com/ThimmeswarnaiduM/ConfigServer.git  # Your Git repo URL
+          label: main  # Ensure this is correct and points to the proper branch
+          timeout: 30  # Increase timeout for connection
+          clone-on-start: true
+          force-pull: true
+
+server:
+  port: 8071
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info"  # Exposing health and info endpoints only for security

@@ -1,0 +1,31 @@
+# Spring Boot application settings
+spring:
+  config:
+    import: optional:configserver:http://localhost:8071/  # Import configuration from a Config Server (optional)
+  application:
+    name: eurekaserver  # Application name for identification within the Spring ecosystem
+
+# Management and actuator endpoints configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"  # Expose all actuator endpoints (restrict in production)
+
+# Server configuration
+server:
+  port: 8070  # Application will run on port 8070
+
+# Eureka service configuration
+eureka:
+  instance:
+    hostname: localhost
+  client:
+    fetchRegistry: false
+    registerWithEureka: false
+  serviceUrl:
+    defaultZone: http://localhost:8070/eureka
+# Logging settings (optional)
+logging:
+  level:
+    com.netflix.eureka: DEBUG  # Enable detailed logging for Eureka (optional for debugging)
